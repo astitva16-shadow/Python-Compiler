@@ -11,12 +11,18 @@ import traceback
 import subprocess
 import tempfile
 import os
-import signal
 import threading
 import time
 from contextlib import redirect_stdout, redirect_stderr
-import resource
 import json
+
+# Platform-specific imports
+try:
+    import signal
+    import resource
+    UNIX_PLATFORM = True
+except ImportError:
+    UNIX_PLATFORM = False
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
@@ -35,11 +41,12 @@ def timeout_handler(signum, frame):
     raise ExecutionTimeout("Code execution timed out")
 
 def limit_memory():
-    """Limit memory usage of the process"""
-    try:
-        resource.setrlimit(resource.RLIMIT_AS, (MAX_MEMORY, MAX_MEMORY))
-    except:
-        pass  # Memory limiting may not work on all platforms
+    """Limit memory usage of the process (Unix only)"""
+    if UNIX_PLATFORM:
+        try:
+            resource.setrlimit(resource.RLIMIT_AS, (MAX_MEMORY, MAX_MEMORY))
+        except:
+            pass
 
 @app.route('/')
 def index():
@@ -100,8 +107,8 @@ def execute_code():
 
 def execute_direct(code):
     """
-    Execute code directly in the current process with timeout
-    More dangerous but faster
+    Execute code directly in the current process with timeout (Unix only)
+    More dangerous but faster. On Windows, uses threading timeout instead.
     """
     start_time = time.time()
     
@@ -109,9 +116,10 @@ def execute_direct(code):
     stdout_buffer = io.StringIO()
     stderr_buffer = io.StringIO()
     
-    # Set up timeout handler
-    old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(MAX_EXECUTION_TIME)
+    if UNIX_PLATFORM:
+        # Set up timeout handler (Unix only)
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(MAX_EXECUTION_TIME)
     
     try:
         # Redirect stdout and stderr
@@ -147,7 +155,7 @@ def execute_direct(code):
         return {
             'success': False,
             'stdout': stdout_buffer.getvalue(),
-            'stderr': stderr_buffer.getvalue(),
+            'stderr': stdout_buffer.getvalue(),
             'error': f'Execution timed out after {MAX_EXECUTION_TIME} seconds'
         }
     
@@ -160,9 +168,10 @@ def execute_direct(code):
         }
     
     finally:
-        # Cancel alarm and restore handler
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)
+        if UNIX_PLATFORM:
+            # Cancel alarm and restore handler (Unix only)
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
 
 def execute_subprocess(code):
     """
