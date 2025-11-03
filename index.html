@@ -493,6 +493,24 @@
         border-right: none;
         border-bottom: 1px solid var(--border-color);
       }
+      
+      /* Allow scrolling on smaller screens */
+      html, body {
+        overflow-y: auto;
+      }
+      
+      .app-container {
+        min-height: 100vh;
+        height: auto;
+      }
+      
+      .main-content {
+        min-height: calc(100vh - 70px);
+      }
+      
+      .editor-wrapper, .output-wrapper {
+        min-height: 400px;
+      }
     }
 
     @media (max-width: 640px) {
@@ -510,6 +528,10 @@
 
       .hide-mobile {
         display: none;
+      }
+      
+      .editor-wrapper, .output-wrapper {
+        min-height: 300px;
       }
     }
 
