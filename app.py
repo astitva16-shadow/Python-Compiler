@@ -15,6 +15,7 @@ import threading
 import time
 from contextlib import redirect_stdout, redirect_stderr
 import json
+import webbrowser
 
 # Platform-specific imports
 try:
@@ -366,6 +367,11 @@ def internal_error(e):
     """Handle 500 errors"""
     return jsonify({'error': 'Internal server error'}), 500
 
+def open_browser():
+    """Open default browser after a short delay"""
+    time.sleep(1.5)  # Wait for server to start
+    webbrowser.open('http://localhost:5000')
+
 if __name__ == '__main__':
     print("=" * 60)
     print("🐍 Python Compiler Backend Server")
@@ -375,6 +381,9 @@ if __name__ == '__main__':
     print(f"Max Memory: {MAX_MEMORY / (1024*1024)}MB")
     print("=" * 60)
     print("\n🚀 Server starting on http://localhost:5000")
-    print("📝 Open http://localhost:5000 in your browser\n")
+    print("📝 Opening browser automatically...\n")
+    
+    # Open browser in a separate thread
+    threading.Thread(target=open_browser, daemon=True).start()
     
     app.run(debug=True, host='0.0.0.0', port=5000, threaded=True)
