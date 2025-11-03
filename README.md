@@ -7,14 +7,31 @@ A modern, fully-functional Python IDE with **dual execution modes**: run code se
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
+## 🚀 Quick Start
+
+```bash
+# Windows: Double-click start.bat
+# Linux/macOS: ./start.sh
+
+# Or manually:
+pip install -r requirements.txt
+python app.py
+```
+
+**Browser opens automatically at `http://localhost:5000` ✨**
+
+---
+
 ## ✨ Features
 
 ### 🎨 Modern UI/UX
 - **Professional Design** - Clean, dark-themed interface with smooth animations
 - **Responsive Layout** - Works seamlessly on desktop, tablet, and mobile devices
+- **Smart Scrolling** - Desktop: scroll within panels; Mobile: full-page scroll
 - **Split Panel View** - Code editor and output panel side-by-side
 - **Line Numbers** - Synchronized line numbers with scroll support
 - **Syntax Highlighting** - Monospace font with clear code visibility
+- **Auto-Browser Launch** - Opens default browser when server starts
 
 ### ⚡ Code Editor Features
 - **10 Built-in Templates** - Quick start with common Python patterns
