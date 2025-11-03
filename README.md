@@ -1,8 +1,9 @@
-# 🐍 Python IDE - Browser Edition
+# 🐍 Python IDE - Full-Stack Compiler
 
-A modern, fully-functional Python IDE that runs entirely in your browser using WebAssembly (Pyodide). No server required!
+A modern, fully-functional Python IDE with **dual execution modes**: run code server-side with full Python support OR client-side in the browser using WebAssembly (Pyodide).
 
-![Python Version](https://img.shields.io/badge/python-3.11-blue.svg)
+![Python Version](https://img.shields.io/badge/python-3.13-blue.svg)
+![Flask](https://img.shields.io/badge/flask-3.0-green.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
@@ -22,17 +23,30 @@ A modern, fully-functional Python IDE that runs entirely in your browser using W
 - **Auto-indentation** - Tab key inserts 4 spaces
 - **Code Persistence** - Your code stays in the browser
 
-### 🚀 Execution & Output
+### 🚀 Dual Execution Modes
+- **Server Mode** - Real Python backend with Flask (all packages, better performance)
+- **Browser Mode** - WebAssembly/Pyodide (offline, no server needed)
+- **Auto Mode** - Automatically selects best available option
+
+### 🔧 Backend Server Features
+- **Real Python Execution** - Full Python 3.13 environment
+- **All Packages** - Install any package via pip (NumPy, Pandas, Requests, etc.)
+- **Subprocess Isolation** - Secure code execution
+- **Timeout Protection** - Configurable execution limits
+- **REST API** - Clean API endpoints for code execution
+- **Auto-Browser Launch** - Opens default browser automatically
+
+### 📦 Package Management
+- **Server Mode** - Install ANY Python package via pip
+- **Browser Mode** - Pure Python packages via micropip
+- **One-click Install** - Simple package installation interface
+
+### 🎯 Execution & Output
 - **Real-time Execution** - Run Python code instantly
 - **Execution Timer** - Track how long your code takes to run
 - **Color-coded Output** - Success (green), errors (red), info (blue)
 - **Output Management** - Clear, copy, and download output
 - **Error Handling** - Clear error messages with stack traces
-
-### 📦 Package Management
-- **Install Packages** - Use micropip to install pure Python packages
-- **Popular Libraries** - NumPy, Matplotlib, Pandas, and more
-- **One-click Install** - Simple package installation interface
 
 ## 🎯 Built-in Code Templates
 
@@ -49,18 +63,47 @@ A modern, fully-functional Python IDE that runs entirely in your browser using W
 
 ## 🚀 Getting Started
 
-### Option 1: Open Directly in Browser
-Simply open `index.html` in any modern browser (Chrome, Firefox, Edge, Safari).
+### Quick Start (Easiest - Windows)
 
-### Option 2: Local Server (Recommended)
-For best performance, serve the file over HTTP:
+1. **Double-click `start.bat`**
+   - Automatically installs dependencies
+   - Starts the Flask backend server
+   - Opens your default browser
+   - Ready to code!
+
+### Quick Start (Linux/macOS)
+
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+### Manual Setup
+
+#### Option 1: With Backend Server (Recommended)
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the server (auto-opens browser)
+python app.py
+```
+
+Then your browser will open automatically at `http://localhost:5000`
+
+#### Option 2: Browser-Only Mode (No Server)
+
+Simply open `index.html` in any modern browser (Chrome, Firefox, Edge, Safari).
+- No installation needed
+- Works offline
+- Limited to pure Python packages
+
+#### Option 3: Local Server for Static Files
 
 ```bash
 # Using Python 3
 python -m http.server 8000
-
-# Using Python 2
-python -m SimpleHTTPServer 8000
 
 # Using Node.js
 npx http-server
@@ -70,6 +113,28 @@ php -S localhost:8000
 ```
 
 Then navigate to `http://localhost:8000`
+
+## 🔧 Execution Modes
+
+### Auto Mode (Default)
+- Automatically uses backend if available
+- Falls back to browser mode if server is offline
+- Best of both worlds
+
+### Server Mode
+- ✅ Full Python 3.13 environment
+- ✅ All pip packages available
+- ✅ Better performance
+- ✅ Real file system access
+- ✅ Network requests
+- ⚠️ Requires backend server running
+
+### Browser Mode
+- ✅ Works offline
+- ✅ No server required
+- ✅ Safe sandboxed execution
+- ⚠️ Limited to pure Python packages
+- ⚠️ Slower for heavy computations
 
 ## 📖 Usage Guide
 
@@ -111,10 +176,27 @@ print(arr.mean())
 ## 🛠️ Technical Details
 
 ### Technologies Used
-- **Pyodide** - Python runtime in WebAssembly
-- **HTML5/CSS3** - Modern web standards
-- **Vanilla JavaScript** - No framework dependencies
-- **Google Fonts** - Inter & JetBrains Mono
+- **Backend**: Python 3.13, Flask 3.0, Flask-CORS
+- **Frontend**: HTML5/CSS3, Vanilla JavaScript
+- **Browser Runtime**: Pyodide (WebAssembly)
+- **Fonts**: Google Fonts (Inter & JetBrains Mono)
+
+### Architecture
+```
+┌─────────────────────────────────────┐
+│         Frontend (HTML/JS)          │
+│  ┌─────────────────────────────┐   │
+│  │   Editor   │    Output      │   │
+│  └─────────────────────────────┘   │
+└──────────┬──────────────┬───────────┘
+           │              │
+    ┌──────▼──────┐  ┌───▼──────────┐
+    │   Flask     │  │   Pyodide    │
+    │   Backend   │  │  (Browser)   │
+    │  (Server)   │  │ (WebAssembly)│
+    └─────────────┘  └──────────────┘
+     Server Mode      Browser Mode
+```
 
 ### Browser Compatibility
 - ✅ Chrome 90+
@@ -123,27 +205,46 @@ print(arr.mean())
 - ✅ Safari 14+
 
 ### Performance
-- **Initial Load** - ~5-10 seconds (Pyodide download)
-- **Code Execution** - Near-native Python speed
-- **Package Installation** - Varies by package size
+- **Backend Server** - Near-native Python speed, better for heavy computations
+- **Browser Mode** - ~5-10 seconds initial load (Pyodide download)
+- **Package Installation** - Server: seconds, Browser: varies by package size
 
 ## 📦 Supported Packages
 
-Pyodide supports many pure Python packages. Popular ones include:
+### Server Mode (All Packages)
+Install ANY Python package via pip:
+- **NumPy** - Numerical computing
+- **Pandas** - Data analysis  
+- **Matplotlib** - Data visualization
+- **SciPy** - Scientific computing
+- **Requests** - HTTP library
+- **BeautifulSoup** - Web scraping
+- **Pillow** - Image processing
+- **Flask, Django** - Web frameworks
+- **TensorFlow, PyTorch** - Machine learning
+- And thousands more!
 
+### Browser Mode (Pure Python Only)
+Pyodide-compatible packages:
 - **NumPy** - Numerical computing
 - **Pandas** - Data analysis
 - **Matplotlib** - Data visualization
 - **SciPy** - Scientific computing
 - **SymPy** - Symbolic mathematics
 - **Pillow** - Image processing
-- **Beautiful Soup** - Web scraping
-- **Requests** - HTTP library
 
-[Full list of packages](https://pyodide.org/en/stable/usage/packages-in-pyodide.html)
+[Full Pyodide package list](https://pyodide.org/en/stable/usage/packages-in-pyodide.html)
 
 ## ⚠️ Limitations
 
+### Backend Server Mode
+- **Security Warning**: Not production-ready (no sandboxing)
+- Development use only
+- No multi-user support
+- No rate limiting
+- See `BACKEND_SETUP.md` for production considerations
+
+### Browser Mode
 - **No C Extensions** - Only pure Python packages work
 - **No Threading** - Limited to single-threaded execution
 - **Memory Limits** - Browser memory constraints apply
@@ -201,15 +302,32 @@ This project is open source and available under the [MIT License](LICENSE).
 
 If you encounter any issues or have questions:
 
-- 🐛 [Report a Bug](https://github.com/astitva16-shadow/E-Commerce/issues)
-- 💡 [Request a Feature](https://github.com/astitva16-shadow/E-Commerce/issues)
+- 🐛 [Report a Bug](https://github.com/astitva16-shadow/Python-Compiler/issues)
+- 💡 [Request a Feature](https://github.com/astitva16-shadow/Python-Compiler/issues)
 - 📧 Contact: astitva16-shadow@users.noreply.github.com
+- 📚 Documentation: See `QUICKSTART.md` and `BACKEND_SETUP.md`
 
 ## 🔗 Links
 
-- **Repository**: [github.com/astitva16-shadow/E-Commerce](https://github.com/astitva16-shadow/E-Commerce)
+- **Repository**: [github.com/astitva16-shadow/Python-Compiler](https://github.com/astitva16-shadow/Python-Compiler)
+- **Flask Docs**: [flask.palletsprojects.com](https://flask.palletsprojects.com/)
 - **Pyodide Docs**: [pyodide.org](https://pyodide.org/)
 - **Python Docs**: [docs.python.org](https://docs.python.org/)
+
+## 📁 Project Structure
+
+```
+Python-Compiler/
+├── index.html              # Main IDE interface
+├── app.py                  # Flask backend server
+├── requirements.txt        # Python dependencies
+├── start.bat              # Windows startup script
+├── start.sh               # Linux/macOS startup script
+├── README.md              # This file
+├── QUICKSTART.md          # Quick start guide
+├── BACKEND_SETUP.md       # Backend configuration guide
+└── IMPLEMENTATION_SUMMARY.md  # Complete implementation details
+```
 
 ---
 
@@ -218,5 +336,7 @@ If you encounter any issues or have questions:
 **Made with ❤️ by [astitva16-shadow](https://github.com/astitva16-shadow)**
 
 ⭐ Star this repo if you find it helpful!
+
+### 🚀 [Try it Now!](https://github.com/astitva16-shadow/Python-Compiler)
 
 </div>
