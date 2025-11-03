@@ -625,6 +625,16 @@ for i in range(10):
 
           <div class="divider hide-mobile"></div>
 
+          <div class="controls-group">
+            <select id="modeSelect" style="width: 140px;">
+              <option value="auto">Auto Mode</option>
+              <option value="server">Server Mode</option>
+              <option value="browser">Browser Mode</option>
+            </select>
+          </div>
+
+          <div class="divider hide-mobile"></div>
+
           <div class="controls-group" style="margin-left: auto;">
             <input id="pkgInput" type="text" placeholder="Package name (e.g., numpy)" style="width: 160px;" />
             <button id="installBtn" class="btn-success">
@@ -695,11 +705,14 @@ for i in range(10):
   <script>
     // ==================== Configuration ====================
     const PYODIDE_URL = 'https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js';
+    const BACKEND_URL = 'http://localhost:5000/api';
     
     // ==================== State ====================
     let pyodide = null;
     let isRunning = false;
     let executionStartTime = null;
+    let executionMode = 'auto'; // 'auto', 'browser', 'server'
+    let backendAvailable = false;
 
     // ==================== DOM Elements ====================
     const statusEl = document.getElementById('status');
@@ -719,6 +732,7 @@ for i in range(10):
     const installBtn = document.getElementById('installBtn');
     const pyver = document.getElementById('pyver');
     const templateSelect = document.getElementById('templateSelect');
+    const modeSelect = document.getElementById('modeSelect');
 
     // ==================== Code Templates ====================
     const templates = {
@@ -898,6 +912,7 @@ print("Plot created!")`
     function init() {
       populateTemplateSelect();
       updateLineNumbers();
+      checkBackend();
       loadPyodideRuntime();
       setupEventListeners();
     }
@@ -934,6 +949,12 @@ print("Plot created!")`
       // Template select
       templateSelect.addEventListener('change', loadTemplate);
 
+      // Mode select
+      modeSelect.addEventListener('change', (e) => {
+        executionMode = e.target.value;
+        appendOutput(`ℹ Execution mode changed to: ${executionMode}`, 'info');
+      });
+
       // Package input - Enter key
       pkgInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') installPackage();
@@ -965,6 +986,26 @@ print("Plot created!")`
 
     function syncScroll() {
       lineNumbers.scrollTop = editor.scrollTop;
+    }
+
+    // ==================== Backend Check ====================
+    async function checkBackend() {
+      try {
+        const response = await fetch(`${BACKEND_URL}/health`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          backendAvailable = true;
+          appendOutput(`✓ Backend server connected (Python ${data.python_version.split(' ')[0]})`, 'success');
+          appendOutput(`  Max execution time: ${data.max_execution_time}s`, 'info');
+        }
+      } catch (error) {
+        backendAvailable = false;
+        appendOutput('ℹ Backend server not available - using browser mode', 'info');
+      }
     }
 
     // ==================== Pyodide Loading ====================
@@ -1023,11 +1064,6 @@ __out.getvalue(), __err.getvalue()`;
     }
 
     async function runCode() {
-      if (!pyodide) {
-        appendOutput('✗ Python runtime not loaded yet. Please wait.', 'error');
-        return;
-      }
-
       if (isRunning) {
         appendOutput('⚠ Code is already running', 'error');
         return;
@@ -1039,27 +1075,38 @@ __out.getvalue(), __err.getvalue()`;
         return;
       }
 
+      // Determine execution mode
+      let useBackend = false;
+      if (executionMode === 'server') {
+        if (!backendAvailable) {
+          appendOutput('✗ Backend server not available. Start the server with: python app.py', 'error');
+          return;
+        }
+        useBackend = true;
+      } else if (executionMode === 'browser') {
+        if (!pyodide) {
+          appendOutput('✗ Python runtime not loaded yet. Please wait.', 'error');
+          return;
+        }
+        useBackend = false;
+      } else { // auto mode
+        useBackend = backendAvailable;
+      }
+
       isRunning = true;
       executionStartTime = performance.now();
       runBtn.disabled = true;
       stopBtn.disabled = false;
 
       appendOutput('━'.repeat(50), 'separator');
-      appendOutput('▶ Executing...', 'info');
+      appendOutput(`▶ Executing (${useBackend ? 'Server' : 'Browser'} Mode)...`, 'info');
 
       try {
-        const wrappedCode = prepareCode(code);
-        const result = await pyodide.runPythonAsync(wrappedCode);
-
-        const stdout = result[0]?.toString() || '';
-        const stderr = result[1]?.toString() || '';
-
-        if (stdout) appendOutput(stdout);
-        if (stderr) appendOutput(stderr, 'error');
-
-        const executionTime = ((performance.now() - executionStartTime) / 1000).toFixed(3);
-        appendOutput(`✓ Completed in ${executionTime}s`, 'success');
-
+        if (useBackend) {
+          await runCodeOnServer(code);
+        } else {
+          await runCodeInBrowser(code);
+        }
       } catch (error) {
         appendOutput(`✗ Error: ${error.message}`, 'error');
       } finally {
@@ -1067,6 +1114,49 @@ __out.getvalue(), __err.getvalue()`;
         runBtn.disabled = false;
         stopBtn.disabled = true;
       }
+    }
+
+    async function runCodeOnServer(code) {
+      try {
+        const response = await fetch(`${BACKEND_URL}/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, method: 'subprocess' })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          if (result.stdout) appendOutput(result.stdout);
+          if (result.stderr) appendOutput(result.stderr, 'error');
+          appendOutput(`✓ Completed in ${result.execution_time}s`, 'success');
+        } else {
+          if (result.stdout) appendOutput(result.stdout);
+          if (result.stderr) appendOutput(result.stderr, 'error');
+          appendOutput(`✗ Error: ${result.error || 'Execution failed'}`, 'error');
+        }
+      } catch (error) {
+        appendOutput(`✗ Network error: ${error.message}`, 'error');
+        appendOutput('Make sure the backend server is running: python app.py', 'info');
+      }
+    }
+
+    async function runCodeInBrowser(code) {
+      if (!pyodide) {
+        throw new Error('Python runtime not loaded');
+      }
+
+      const wrappedCode = prepareCode(code);
+      const result = await pyodide.runPythonAsync(wrappedCode);
+
+      const stdout = result[0]?.toString() || '';
+      const stderr = result[1]?.toString() || '';
+
+      if (stdout) appendOutput(stdout);
+      if (stderr) appendOutput(stderr, 'error');
+
+      const executionTime = ((performance.now() - executionStartTime) / 1000).toFixed(3);
+      appendOutput(`✓ Completed in ${executionTime}s`, 'success');
     }
 
     function stopExecution() {
@@ -1165,21 +1255,45 @@ __out.getvalue(), __err.getvalue()`;
         return;
       }
 
-      if (!pyodide) {
+      // Determine which mode to use for installation
+      let useBackend = false;
+      if (executionMode === 'server' && backendAvailable) {
+        useBackend = true;
+      } else if (executionMode === 'browser' && !pyodide) {
         appendOutput('✗ Python runtime not loaded yet', 'error');
         return;
+      } else if (executionMode === 'auto') {
+        useBackend = backendAvailable;
       }
 
-      appendOutput(`⬇ Installing ${packageName}...`, 'info');
+      appendOutput(`⬇ Installing ${packageName} (${useBackend ? 'Server' : 'Browser'} Mode)...`, 'info');
       installBtn.disabled = true;
 
       try {
-        await pyodide.runPythonAsync(`
+        if (useBackend) {
+          const response = await fetch(`${BACKEND_URL}/install`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ package: packageName })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            appendOutput(`✓ ${result.message}`, 'success');
+            pkgInput.value = '';
+          } else {
+            appendOutput(`✗ ${result.error}`, 'error');
+            if (result.output) appendOutput(result.output, 'error');
+          }
+        } else {
+          await pyodide.runPythonAsync(`
 import micropip
 await micropip.install("${packageName}")
-        `);
-        appendOutput(`✓ Successfully installed: ${packageName}`, 'success');
-        pkgInput.value = '';
+          `);
+          appendOutput(`✓ Successfully installed: ${packageName}`, 'success');
+          pkgInput.value = '';
+        }
       } catch (error) {
         appendOutput(`✗ Failed to install ${packageName}: ${error.message}`, 'error');
       } finally {
