@@ -1,0 +1,1194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Python IDE - Browser Edition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #0f1419;
+      --bg-tertiary: #1a1f2e;
+      --accent-primary: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-success: #10b981;
+      --accent-warning: #f59e0b;
+      --accent-error: #ef4444;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border-color: rgba(148, 163, 184, 0.1);
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0a0e1a 0%, #1a1f2e 100%);
+      color: var(--text-primary);
+      overflow: hidden;
+    }
+
+    .app-container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-md);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+    }
+
+    .logo svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-badge.loading {
+      background: rgba(251, 191, 36, 0.1);
+      color: var(--accent-warning);
+    }
+
+    .status-badge.ready {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-success);
+    }
+
+    .status-badge .pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .editor-panel, .output-panel {
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-secondary);
+    }
+
+    .editor-panel {
+      border-right: 1px solid var(--border-color);
+    }
+
+    /* Panel Header */
+    .panel-header {
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* Editor */
+    .editor-wrapper {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .line-numbers {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      padding: 1rem 0.5rem;
+      text-align: right;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      user-select: none;
+      border-right: 1px solid var(--border-color);
+      overflow: hidden;
+    }
+
+    .editor {
+      flex: 1;
+      padding: 1rem;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      border: none;
+      outline: none;
+      resize: none;
+      overflow-y: auto;
+      tab-size: 4;
+    }
+
+    .editor::-webkit-scrollbar, .output::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .editor::-webkit-scrollbar-track, .output::-webkit-scrollbar-track {
+      background: var(--bg-tertiary);
+    }
+
+    .editor::-webkit-scrollbar-thumb, .output::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 5px;
+    }
+
+    .editor::-webkit-scrollbar-thumb:hover, .output::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
+
+    /* Controls */
+    .controls {
+      padding: 1rem;
+      background: var(--bg-tertiary);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .controls-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border-color);
+      margin: 0 0.25rem;
+    }
+
+    /* Buttons */
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'Inter', sans-serif;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent-primary);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-success {
+      background: var(--accent-success);
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #059669;
+    }
+
+    .btn-warning {
+      background: var(--accent-warning);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .btn-icon {
+      padding: 0.5rem;
+      background: transparent;
+      color: var(--text-secondary);
+    }
+
+    .btn-icon:hover:not(:disabled) {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    /* Input */
+    input[type="text"] {
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent-primary);
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--text-muted);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    /* Select Dropdown */
+    select {
+      padding: 0.5rem 2rem 0.5rem 0.75rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.375rem;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      background-size: 1.25rem;
+    }
+
+    /* Output */
+    .output-wrapper {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .output {
+      height: 100%;
+      padding: 1rem;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      line-height: 1.6;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .output.empty {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-style: italic;
+    }
+
+    .output-line {
+      margin: 0.25rem 0;
+    }
+
+    .output-error {
+      color: var(--accent-error);
+    }
+
+    .output-success {
+      color: var(--accent-success);
+    }
+
+    .output-info {
+      color: var(--accent-primary);
+    }
+
+    .output-separator {
+      color: var(--text-muted);
+      margin: 0.5rem 0;
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+
+    /* Execution Info */
+    .execution-info {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-xl);
+      animation: slideUp 0.3s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .modal-body {
+      margin-bottom: 1rem;
+    }
+
+    .template-item {
+      padding: 1rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 0.5rem;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .template-item:hover {
+      border-color: var(--accent-primary);
+      transform: translateX(4px);
+    }
+
+    .template-name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .template-desc {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+      }
+
+      .editor-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header {
+        padding: 0.75rem 1rem;
+      }
+
+      .logo {
+        font-size: 1rem;
+      }
+
+      .controls {
+        padding: 0.75rem;
+      }
+
+      .hide-mobile {
+        display: none;
+      }
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z"/>
+          </svg>
+          Python IDE
+        </div>
+        <div id="status" class="status-badge loading">
+          <span class="pulse"></span>
+          <span id="statusText">Initializing...</span>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="hide-mobile">Pyodide:</span> <span id="pyver">-</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Editor Panel -->
+      <div class="editor-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+            Code Editor
+          </div>
+          <div class="panel-actions">
+            <select id="templateSelect">
+              <option value="">Load Template...</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="editor-wrapper">
+          <div id="lineNumbers" class="line-numbers">1</div>
+          <textarea id="editor" class="editor" spellcheck="false" placeholder="# Write your Python code here..."># Example: Fibonacci Sequence
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+# Calculate and display Fibonacci numbers
+print("Fibonacci Sequence:")
+for i in range(10):
+    print(f"F({i}) = {fibonacci(i)}")
+</textarea>
+        </div>
+
+        <div class="controls">
+          <div class="controls-group">
+            <button id="runBtn" class="btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              Run Code <span class="hide-mobile">(Ctrl+Enter)</span>
+            </button>
+            <button id="stopBtn" class="btn-warning" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12"/>
+              </svg>
+              Stop
+            </button>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="controls-group">
+            <button id="clearEditorBtn" class="btn-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+              Clear
+            </button>
+            <button id="uploadBtn" class="btn-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+              </svg>
+              Upload
+            </button>
+            <button id="downloadBtn" class="btn-secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              Download
+            </button>
+          </div>
+
+          <div class="divider hide-mobile"></div>
+
+          <div class="controls-group" style="margin-left: auto;">
+            <input id="pkgInput" type="text" placeholder="Package name (e.g., numpy)" style="width: 160px;" />
+            <button id="installBtn" class="btn-success">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 8v8M8 12h8"/>
+              </svg>
+              Install
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Output Panel -->
+      <div class="output-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="4 17 10 11 4 5"></polyline>
+              <line x1="12" y1="19" x2="20" y2="19"></line>
+            </svg>
+            Output
+          </div>
+          <div class="panel-actions">
+            <button id="clearOutBtn" class="btn-icon" title="Clear Output">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+              </svg>
+            </button>
+            <button id="copyOutputBtn" class="btn-icon" title="Copy Output">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="output-wrapper">
+          <pre id="output" class="output empty">No output yet. Run your code to see results.</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- File Upload Input (Hidden) -->
+  <input type="file" id="fileInput" accept=".py,.txt" />
+
+  <!-- Templates Modal -->
+  <div id="templatesModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Code Templates</div>
+        <button class="btn-icon" onclick="closeTemplatesModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="templatesBody">
+        <!-- Templates will be populated here -->
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    // ==================== Configuration ====================
+    const PYODIDE_URL = 'https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js';
+    
+    // ==================== State ====================
+    let pyodide = null;
+    let isRunning = false;
+    let executionStartTime = null;
+
+    // ==================== DOM Elements ====================
+    const statusEl = document.getElementById('status');
+    const statusText = document.getElementById('statusText');
+    const runBtn = document.getElementById('runBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const clearOutBtn = document.getElementById('clearOutBtn');
+    const copyOutputBtn = document.getElementById('copyOutputBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const clearEditorBtn = document.getElementById('clearEditorBtn');
+    const fileInput = document.getElementById('fileInput');
+    const outputEl = document.getElementById('output');
+    const editor = document.getElementById('editor');
+    const lineNumbers = document.getElementById('lineNumbers');
+    const pkgInput = document.getElementById('pkgInput');
+    const installBtn = document.getElementById('installBtn');
+    const pyver = document.getElementById('pyver');
+    const templateSelect = document.getElementById('templateSelect');
+
+    // ==================== Code Templates ====================
+    const templates = {
+      hello: {
+        name: 'Hello World',
+        description: 'Simple hello world program',
+        code: `# Hello World
+print("Hello, World!")
+print("Welcome to Python IDE!")`
+      },
+      fibonacci: {
+        name: 'Fibonacci Sequence',
+        description: 'Generate Fibonacci numbers',
+        code: `# Fibonacci Sequence Generator
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+print("Fibonacci Sequence:")
+for i in range(10):
+    print(f"F({i}) = {fibonacci(i)}")`
+      },
+      primes: {
+        name: 'Prime Numbers',
+        description: 'Find prime numbers up to N',
+        code: `# Prime Number Finder
+def is_prime(n):
+    if n < 2:
+        return False
+    for i in range(2, int(n**0.5) + 1):
+        if n % i == 0:
+            return False
+    return True
+
+limit = 50
+primes = [n for n in range(2, limit) if is_prime(n)]
+print(f"Prime numbers up to {limit}:")
+print(primes)`
+      },
+      factorial: {
+        name: 'Factorial Calculator',
+        description: 'Calculate factorial using recursion',
+        code: `# Factorial Calculator
+def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+for i in range(10):
+    print(f"{i}! = {factorial(i)}")`
+      },
+      palindrome: {
+        name: 'Palindrome Checker',
+        description: 'Check if a string is a palindrome',
+        code: `# Palindrome Checker
+def is_palindrome(text):
+    text = text.lower().replace(" ", "")
+    return text == text[::-1]
+
+test_strings = ["radar", "hello", "A man a plan a canal Panama", "Python"]
+
+for s in test_strings:
+    result = "is" if is_palindrome(s) else "is not"
+    print(f'"{s}" {result} a palindrome')`
+      },
+      sorting: {
+        name: 'Sorting Algorithms',
+        description: 'Bubble sort implementation',
+        code: `# Bubble Sort Algorithm
+def bubble_sort(arr):
+    n = len(arr)
+    for i in range(n):
+        for j in range(0, n - i - 1):
+            if arr[j] > arr[j + 1]:
+                arr[j], arr[j + 1] = arr[j + 1], arr[j]
+    return arr
+
+numbers = [64, 34, 25, 12, 22, 11, 90]
+print("Original array:", numbers)
+sorted_numbers = bubble_sort(numbers.copy())
+print("Sorted array:", sorted_numbers)`
+      },
+      lists: {
+        name: 'List Operations',
+        description: 'Common list operations',
+        code: `# List Operations
+numbers = [1, 2, 3, 4, 5]
+
+print("Original list:", numbers)
+print("Length:", len(numbers))
+print("Sum:", sum(numbers))
+print("Max:", max(numbers))
+print("Min:", min(numbers))
+
+# List comprehension
+squares = [x**2 for x in numbers]
+print("Squares:", squares)
+
+# Filtering
+evens = [x for x in numbers if x % 2 == 0]
+print("Even numbers:", evens)`
+      },
+      classes: {
+        name: 'Classes and Objects',
+        description: 'OOP example with classes',
+        code: `# Classes and Objects
+class Dog:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+    
+    def bark(self):
+        return f"{self.name} says Woof!"
+    
+    def get_info(self):
+        return f"{self.name} is {self.age} years old"
+
+# Create instances
+dog1 = Dog("Buddy", 3)
+dog2 = Dog("Max", 5)
+
+print(dog1.get_info())
+print(dog1.bark())
+print(dog2.get_info())
+print(dog2.bark())`
+      },
+      files: {
+        name: 'File Operations',
+        description: 'Read and write files (virtual filesystem)',
+        code: `# File Operations (Virtual Filesystem)
+# Write to file
+with open("example.txt", "w") as f:
+    f.write("Hello from Python!\\n")
+    f.write("This is a test file.\\n")
+
+# Read from file
+with open("example.txt", "r") as f:
+    content = f.read()
+    print("File content:")
+    print(content)
+
+# Append to file
+with open("example.txt", "a") as f:
+    f.write("Appended line\\n")
+
+# Read again
+with open("example.txt", "r") as f:
+    print("\\nUpdated content:")
+    print(f.read())`
+      },
+      matplotlib: {
+        name: 'Matplotlib Plot',
+        description: 'Create a simple plot (requires matplotlib)',
+        code: `# Matplotlib Example (Install matplotlib first)
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Generate data
+x = np.linspace(0, 2 * np.pi, 100)
+y = np.sin(x)
+
+# Create plot
+plt.figure(figsize=(10, 6))
+plt.plot(x, y, 'b-', linewidth=2)
+plt.title('Sine Wave')
+plt.xlabel('x')
+plt.ylabel('sin(x)')
+plt.grid(True)
+plt.show()
+
+print("Plot created!")`
+      }
+    };
+
+    // ==================== Initialization ====================
+    function init() {
+      populateTemplateSelect();
+      updateLineNumbers();
+      loadPyodideRuntime();
+      setupEventListeners();
+    }
+
+    function populateTemplateSelect() {
+      Object.entries(templates).forEach(([key, template]) => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = template.name;
+        templateSelect.appendChild(option);
+      });
+    }
+
+    // ==================== Event Listeners ====================
+    function setupEventListeners() {
+      // Editor events
+      editor.addEventListener('input', updateLineNumbers);
+      editor.addEventListener('scroll', syncScroll);
+      editor.addEventListener('keydown', handleKeyDown);
+
+      // Button events
+      runBtn.addEventListener('click', runCode);
+      stopBtn.addEventListener('click', stopExecution);
+      clearOutBtn.addEventListener('click', clearOutput);
+      copyOutputBtn.addEventListener('click', copyOutput);
+      downloadBtn.addEventListener('click', downloadCode);
+      uploadBtn.addEventListener('click', () => fileInput.click());
+      clearEditorBtn.addEventListener('click', clearEditor);
+      installBtn.addEventListener('click', installPackage);
+
+      // File input
+      fileInput.addEventListener('change', handleFileUpload);
+
+      // Template select
+      templateSelect.addEventListener('change', loadTemplate);
+
+      // Package input - Enter key
+      pkgInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') installPackage();
+      });
+    }
+
+    function handleKeyDown(e) {
+      // Ctrl+Enter to run
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        runCode();
+      }
+      
+      // Tab key
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
+        editor.selectionStart = editor.selectionEnd = start + 4;
+      }
+    }
+
+    // ==================== Line Numbers ====================
+    function updateLineNumbers() {
+      const lines = editor.value.split('\n').length;
+      lineNumbers.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('\n');
+    }
+
+    function syncScroll() {
+      lineNumbers.scrollTop = editor.scrollTop;
+    }
+
+    // ==================== Pyodide Loading ====================
+    async function loadPyodideRuntime() {
+      try {
+        updateStatus('loading', 'Loading Pyodide...');
+        
+        if (!window.loadPyodide) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = PYODIDE_URL;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('Failed to load Pyodide script'));
+            document.head.appendChild(script);
+          });
+        }
+
+        updateStatus('loading', 'Initializing Python runtime...');
+        pyodide = await window.loadPyodide({
+          indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.23.4/full/'
+        });
+
+        const version = await pyodide.runPythonAsync('import sys; sys.version.split(" ")[0]');
+        pyver.textContent = version;
+
+        updateStatus('ready', 'Ready');
+        appendOutput('✓ Python runtime initialized successfully', 'success');
+        appendOutput(`Python version: ${version}`, 'info');
+      } catch (error) {
+        updateStatus('loading', 'Failed to load');
+        appendOutput(`✗ Error loading Pyodide: ${error.message}`, 'error');
+      }
+    }
+
+    function updateStatus(type, text) {
+      statusText.textContent = text;
+      statusEl.className = `status-badge ${type}`;
+    }
+
+    // ==================== Code Execution ====================
+    function prepareCode(userCode) {
+      const indented = userCode.split('\n').map(line => '    ' + line).join('\n');
+      return `import sys, io
+__out = io.StringIO()
+__err = io.StringIO()
+_old_stdout = sys.stdout
+_old_stderr = sys.stderr
+sys.stdout = __out
+sys.stderr = __err
+try:
+${indented}
+finally:
+    sys.stdout = _old_stdout
+    sys.stderr = _old_stderr
+__out.getvalue(), __err.getvalue()`;
+    }
+
+    async function runCode() {
+      if (!pyodide) {
+        appendOutput('✗ Python runtime not loaded yet. Please wait.', 'error');
+        return;
+      }
+
+      if (isRunning) {
+        appendOutput('⚠ Code is already running', 'error');
+        return;
+      }
+
+      const code = editor.value.trim();
+      if (!code) {
+        appendOutput('⚠ No code to execute', 'error');
+        return;
+      }
+
+      isRunning = true;
+      executionStartTime = performance.now();
+      runBtn.disabled = true;
+      stopBtn.disabled = false;
+
+      appendOutput('━'.repeat(50), 'separator');
+      appendOutput('▶ Executing...', 'info');
+
+      try {
+        const wrappedCode = prepareCode(code);
+        const result = await pyodide.runPythonAsync(wrappedCode);
+
+        const stdout = result[0]?.toString() || '';
+        const stderr = result[1]?.toString() || '';
+
+        if (stdout) appendOutput(stdout);
+        if (stderr) appendOutput(stderr, 'error');
+
+        const executionTime = ((performance.now() - executionStartTime) / 1000).toFixed(3);
+        appendOutput(`✓ Completed in ${executionTime}s`, 'success');
+
+      } catch (error) {
+        appendOutput(`✗ Error: ${error.message}`, 'error');
+      } finally {
+        isRunning = false;
+        runBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    }
+
+    function stopExecution() {
+      if (!isRunning) return;
+      appendOutput('⚠ Stop requested - Reload page to force stop long-running code', 'error');
+    }
+
+    // ==================== Output Management ====================
+    function appendOutput(text, type = '') {
+      if (!text) return;
+
+      if (outputEl.classList.contains('empty')) {
+        outputEl.classList.remove('empty');
+        outputEl.textContent = '';
+      }
+
+      const line = document.createElement('div');
+      line.className = 'output-line';
+      if (type) line.className += ` output-${type}`;
+      line.textContent = text;
+      outputEl.appendChild(line);
+      outputEl.scrollTop = outputEl.scrollHeight;
+    }
+
+    function clearOutput() {
+      outputEl.innerHTML = '';
+      outputEl.classList.add('empty');
+      outputEl.textContent = 'No output yet. Run your code to see results.';
+    }
+
+    function copyOutput() {
+      const text = outputEl.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = copyOutputBtn.innerHTML;
+        copyOutputBtn.innerHTML = '<span style="color: var(--accent-success)">✓ Copied!</span>';
+        setTimeout(() => {
+          copyOutputBtn.innerHTML = originalText;
+        }, 2000);
+      });
+    }
+
+    // ==================== Editor Management ====================
+    function clearEditor() {
+      if (confirm('Are you sure you want to clear the editor?')) {
+        editor.value = '';
+        updateLineNumbers();
+      }
+    }
+
+    function downloadCode() {
+      const code = editor.value || '# Empty file';
+      const blob = new Blob([code], { type: 'text/x-python' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      a.href = url;
+      a.download = `script_${timestamp}.py`;
+      a.click();
+      URL.revokeObjectURL(url);
+      appendOutput('✓ File downloaded', 'success');
+    }
+
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        editor.value = event.target.result;
+        updateLineNumbers();
+        appendOutput(`✓ Loaded file: ${file.name}`, 'success');
+      };
+      reader.readAsText(file);
+      fileInput.value = ''; // Reset input
+    }
+
+    function loadTemplate() {
+      const templateKey = templateSelect.value;
+      if (!templateKey) return;
+
+      const template = templates[templateKey];
+      if (template) {
+        editor.value = template.code;
+        updateLineNumbers();
+        appendOutput(`✓ Loaded template: ${template.name}`, 'success');
+      }
+
+      templateSelect.value = ''; // Reset select
+    }
+
+    // ==================== Package Installation ====================
+    async function installPackage() {
+      const packageName = pkgInput.value.trim();
+      if (!packageName) {
+        appendOutput('⚠ Please enter a package name', 'error');
+        return;
+      }
+
+      if (!pyodide) {
+        appendOutput('✗ Python runtime not loaded yet', 'error');
+        return;
+      }
+
+      appendOutput(`⬇ Installing ${packageName}...`, 'info');
+      installBtn.disabled = true;
+
+      try {
+        await pyodide.runPythonAsync(`
+import micropip
+await micropip.install("${packageName}")
+        `);
+        appendOutput(`✓ Successfully installed: ${packageName}`, 'success');
+        pkgInput.value = '';
+      } catch (error) {
+        appendOutput(`✗ Failed to install ${packageName}: ${error.message}`, 'error');
+      } finally {
+        installBtn.disabled = false;
+      }
+    }
+
+    // ==================== Start Application ====================
+    init();
+  </script>
+</body>
+</html>
